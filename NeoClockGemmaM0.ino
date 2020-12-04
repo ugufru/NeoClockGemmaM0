@@ -10,7 +10,7 @@
 
 #define LED_PIN    1
 #define LED_COUNT 12
-#define LED_BRIGHTNESS 100
+#define LED_BRIGHTNESS 255
 
 #define DATAPIN   3
 #define CLOCKPIN   4
