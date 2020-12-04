@@ -1,3 +1,6 @@
+
+// Flashing variation; only the cardinal.
+
 #include <Adafruit_NeoPixel.h>
 #include <Wire.h>
 #include <TimeLib.h>
@@ -29,12 +32,12 @@ byte offset2 = 3;
 
 void setup()
 {
-  Serial.begin(9600);
-  while (!Serial) ; // wait for serial
+  //  Serial.begin(9600);
+  //  while (!Serial) ; // wait for serial
 
   strip.begin();           // INITIALIZE NeoPixel strip object (REQUIRED)
   strip.show();            // Turn OFF all pixels ASAP
-  strip.setBrightness(100); // Set BRIGHTNESS to about 1/5 (max = 255)
+  strip.setBrightness(255); // Set BRIGHTNESS to about 1/5 (max = 255)
 
   RTC.get();
 
@@ -52,61 +55,67 @@ void setup()
 void loop()
 {
   updateTime();
-  delay(250);
 }
 
 void updateTime()
 {
   RTC.read(tm);
-  
+
   int h = (tm.Hour > 12) ? tm.Hour - 12 : tm.Hour ;
   int m = tm.Minute / 5;
   int s = tm.Second / 5;
 
-  Serial.print("tm.Hour = ");
-  Serial.print(tm.Hour);
-  Serial.print(", tm.Minute = ");
-  Serial.print(tm.Minute);
-  Serial.print(", tm.Second = ");
-  Serial.print(tm.Second);
+  //  Serial.print("tm.Hour = ");
+  //  Serial.print(tm.Hour);
+  //  Serial.print(", tm.Minute = ");
+  //  Serial.print(tm.Minute);
+  //  Serial.print(", tm.Second = ");
+  //  Serial.print(tm.Second);
+  //
+  //  Serial.print(", h = ");
+  //  Serial.print(h);
+  //  Serial.print(", m = ");
+  //  Serial.print(m);
+  //  Serial.print(", s = ");
+  //  Serial.println(s);
 
-  Serial.print(", h = ");
-  Serial.print(h);
-  Serial.print(", m = ");
-  Serial.print(m);
-  Serial.print(", s = ");
-  Serial.println(s);
+  // Every hour do the rainbow dance...
+  if (m == 0)
+  {
+    for (int i = 0; i < 10; i++)
+    {
+      doTheRainbowDance();
+      delay(100);
+    }
+    return;
+  }
 
+  // Otherwise just draw the clock face.
+  // The cardinal is white and flashes.
+  
   for (int i = 0; i < 12; i++)
   {
-    if (i == h)
+    if ((tm.Second % 2 == 0) && (i == 0))
     {
-      strip.setPixelColor(i, 255, 0, 0);
-    }
-    else if (i == m)
-    {
-      strip.setPixelColor(i, 0, 255, 0);
-    }
-    else if (i == s)
-    {
-      strip.setPixelColor(i, 0, 0, 255);
+      strip.setPixelColor(i, 100, 100, 100);
     }
     else
     {
-      if (i == 0)
+      if (i == h)
       {
-        strip.setPixelColor(i, 100, 100, 0);
+        strip.setPixelColor(i, 255, 0, 0);
       }
-      else if (i == 3 || i == 6 || i == 9)
+      else if (i == m)
       {
-        strip.setPixelColor(i, 50, 50, 50);
+        strip.setPixelColor(i, 0, 255, 0);
+      }
+      else if (i == s)
+      {
+        strip.setPixelColor(i, 0, 0, 255);
       }
       else
       {
-        if (tm.Second % 2 != 0)
-          strip.setPixelColor(i, 0, 0, 0);
-        else
-          strip.setPixelColor(i, 50, 50, 50);
+        strip.setPixelColor(i, 0, 0, 0);
       }
     }
   }
@@ -114,7 +123,7 @@ void updateTime()
   strip.show();
 }
 
-void doTheLights()
+void doTheRainbowDance()
 {
   pushPixel(Wheel(hue));
 
