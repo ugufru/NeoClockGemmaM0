@@ -1,19 +1,27 @@
 
 // Flashing variation; only the cardinal.
 
+#include <Adafruit_DotStar.h>
 #include <Adafruit_NeoPixel.h>
+#include <SPI.h>
 #include <Wire.h>
 #include <TimeLib.h>
-#include <DS1307RTC.h>
+#include "RTClib.h"
 
-#define LED_PIN    2
+#define LED_PIN    1
 #define LED_COUNT 12
+#define LED_BRIGHTNESS 100
 
-tmElements_t tm;
+#define DATAPIN   3
+#define CLOCKPIN   4
+
+RTC_PCF8523 rtc;
 
 int hh = 0;
 int mm = 0;
 int ss = 0;
+
+Adafruit_DotStar dotstar = Adafruit_DotStar(1, DATAPIN, CLOCKPIN, DOTSTAR_BGR);
 
 // Argument 1 = Number of pixels in NeoPixel strip
 // Argument 2 = Arduino pin number (most are valid)
@@ -28,98 +36,174 @@ byte hue = 0;
 byte offset = 4;
 byte offset2 = 3;
 
+int loopCount = 0;
 
 
 void setup()
 {
-  //  Serial.begin(9600);
-  //  while (!Serial) ; // wait for serial
+  //    Serial.begin(9600);
+  //    while (!Serial) ; // wait for serial
+  //    Serial.println("Hello...");
 
   strip.begin();           // INITIALIZE NeoPixel strip object (REQUIRED)
   strip.show();            // Turn OFF all pixels ASAP
-  strip.setBrightness(255); // Set BRIGHTNESS to about 1/5 (max = 255)
+  strip.setBrightness(LED_BRIGHTNESS); // Set BRIGHTNESS to about 1/5 (max = 255)
 
-  RTC.get();
+  dotstar.begin();
+  dotstar.show();
 
-  if (RTC.chipPresent())
+  initRTC();
+}
+
+void initRTC()
+{
+  if (rtc.begin() == false) error(80);
+
+  //    Serial.println("Something, something...");
+  //    Serial.print("rtc.initialized() = ");
+  //    Serial.println(rtc.initialized());
+  //    Serial.print("rtc.lostPower() = ");
+  //    Serial.println(rtc.lostPower());
+
+  if (! rtc.initialized() || rtc.lostPower())
   {
-    flashColor(Wheel(0));
+    //   Serial.println("RTC is NOT initialized, let's set the time!");
+    // When time needs to be set on a new device, or after a power loss, the
+    // following line sets the RTC to the date & time this sketch was compiled
+    //rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
+    // This line sets the RTC with an explicit date & time, for example to set
+    // January 21, 2014 at 3am you would call:
+    // rtc.adjust(DateTime(2014, 1, 21, 3, 0, 0));
+    //
+    // Note: allow 2 seconds after inserting battery or applying external power
+    // without battery before calling adjust(). This gives the PCF8523's
+    // crystal oscillator time to stabilize. If you call adjust() very quickly
+    // after the RTC is powered, lostPower() may still return true.
   }
-  else
-  {
-    flashColor(Wheel(80));
-  }
+
+  // When time needs to be re-set on a previously configured device, the
+  // following line sets the RTC to the date & time this sketch was compiled
+  //  rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
+  // This line sets the RTC with an explicit date & time, for example to set
+  // January 21, 2014 at 3am you would call:
+  // rtc.adjust(DateTime(2014, 1, 21, 3, 0, 0));
+
+  // When the RTC was stopped and stays connected to the battery, it has
+  // to be restarted by clearing the STOP bit. Let's do this to ensure
+  // the RTC is running.
+  rtc.start();
+}
+
+void error(int pos)
+{
+  flashColor(Wheel(pos));
+  abort();
 }
 
 
 void loop()
 {
-  updateTime();
+  loopCount = (loopCount + 1) % 50000;
+
+  if (loopCount == 0) updateTime();
 }
 
 void updateTime()
 {
-  RTC.read(tm);
+  DateTime now = rtc.now();
 
-  int h = (tm.Hour > 12) ? tm.Hour - 12 : tm.Hour ;
-  int m = tm.Minute / 5;
-  int s = tm.Second / 5;
+  int h = now.twelveHour() % 12;
+  int m = now.minute();
+  int s = now.second();
+  int hh = h;
+  int mm = m / 5;
+  int ss = s / 5;
 
-  //  Serial.print("tm.Hour = ");
-  //  Serial.print(tm.Hour);
-  //  Serial.print(", tm.Minute = ");
-  //  Serial.print(tm.Minute);
-  //  Serial.print(", tm.Second = ");
-  //  Serial.print(tm.Second);
-  //
-  //  Serial.print(", h = ");
-  //  Serial.print(h);
-  //  Serial.print(", m = ");
-  //  Serial.print(m);
-  //  Serial.print(", s = ");
-  //  Serial.println(s);
+  //    Serial.print(", h = ");
+  //    Serial.print(h);
+  //    Serial.print(", m = ");
+  //    Serial.print(m);
+  //    Serial.print(", s = ");
+  //    Serial.print(s);
+  //    Serial.print(" -|- hh = ");
+  //    Serial.print(hh);
+  //    Serial.print(", mm = ");
+  //    Serial.print(mm);
+  //    Serial.print(", ss = ");
+  //    Serial.println(ss);
 
-  // Every hour do the rainbow dance...
-  if (m == 0)
-  {
-    for (int i = 0; i < 10; i++)
-    {
-      doTheRainbowDance();
-      delay(100);
-    }
-    return;
-  }
-
-  // Otherwise just draw the clock face.
   // The cardinal is white and flashes.
-  
+
   for (int i = 0; i < 12; i++)
   {
-    if ((tm.Second % 2 == 0) && (i == 0))
+    if (s % 2 == 0)
     {
-      strip.setPixelColor(i, 100, 100, 100);
-    }
-    else
-    {
-      if (i == h)
+      if (i == 0)
       {
-        strip.setPixelColor(i, 255, 0, 0);
-      }
-      else if (i == m)
-      {
-        strip.setPixelColor(i, 0, 255, 0);
-      }
-      else if (i == s)
-      {
-        strip.setPixelColor(i, 0, 0, 255);
+        strip.setPixelColor(i, 100, 100, 100);
       }
       else
       {
-        strip.setPixelColor(i, 0, 0, 0);
+        if (i == ss)
+        {
+          int v = (s - (ss * 5)) * 32 + 64;
+          strip.setPixelColor(i, 0, 0, v);
+        }
+        else
+        {
+          if (i == mm)
+          {
+            strip.setPixelColor(i, 0, 255, 0);
+          }
+          else
+          {
+            if (i == hh)
+            {
+              strip.setPixelColor(i, 255, 0, 0);
+            }
+            else
+            {
+              strip.setPixelColor(i, 0, 0, 0);
+            }
+          }
+        }
+      }
+    }
+    else
+    {
+      if (i == hh)
+      {
+        strip.setPixelColor(i, 255, 0, 0);
+      }
+      else
+      {
+        if (i == mm)
+        {
+          strip.setPixelColor(i, 0, 255, 0);
+        }
+        else
+        {
+          if (i == ss)
+          {
+            int v = (s - (ss * 5)) * 32 + 64;
+            strip.setPixelColor(i, 0, 0, v);
+            //            strip.setPixelColor(i, 0, 0, 255);
+          }
+          else
+          {
+            if ((i > 0) && (i <= hh))
+            {
+              strip.setPixelColor(i, 0, 0, 0);
+            }
+            else
+            {
+              strip.setPixelColor(i, 0, 0, 0);
+            }
+          }
+        }
       }
     }
   }
-
   strip.show();
 }
 
